@@ -50,7 +50,11 @@ class ElmMakeCommand(default_exec.ExecCommand):
             self.debug_text = get_string('make.missing_plugin')
 
     def on_data(self, proc, data):
-        self.buffer += data
+        # ST3 ExecCommand base class changed from receiving bytes to str
+        if isinstance(data, str):
+            self.buffer += data
+        else:
+            self.buffer += data.decode(self.encoding)
 
     def on_finished(self, proc):
         result_strs = self.buffer.split('\n')

@@ -1,0 +1,3 @@
+New in Elm Language Support 0.22.2 (Mar 24, 2018)
+
+- Fix: Restore build system compatibility with Sublime Text 3 releases prior to r3153.
