@@ -17,6 +17,7 @@ class ElmMakeCommand(default_exec.ExecCommand):
     # inspired by: http://www.sublimetext.com/forum/viewtopic.php?t=12028
     def run(self, error_format, info_format, syntax, null_device, warnings, **kwargs):
         self.buffer = ''
+        self.data_in_bytes = False # ST3 r3153 changed ExecCommand from bytes to str so we must detect which we get and handle appropriately: https://github.com/elm-community/SublimeElmLanguageSupport/issues/48
         self.warnings = warnings == "true"
         self.error_format = string.Template(error_format)
         self.info_format = string.Template(info_format)
@@ -50,10 +51,11 @@ class ElmMakeCommand(default_exec.ExecCommand):
             self.debug_text = get_string('make.missing_plugin')
 
     def on_data(self, proc, data):
-        # ST3 ExecCommand base class changed from receiving bytes to str
         if isinstance(data, str):
             self.buffer += data
         else:
+            # ST3 r3153 changed ExecCommand from bytes to str so we must detect which we get and handle appropriately: https://github.com/elm-community/SublimeElmLanguageSupport/issues/48
+            self.data_in_bytes = True
             self.buffer += data.decode(self.encoding)
 
     def on_finished(self, proc):
@@ -61,6 +63,8 @@ class ElmMakeCommand(default_exec.ExecCommand):
         flat_map = lambda f, xss: sum(map(f, xss), [])
         output_strs = flat_map(self.format_result, result_strs) + ['']
         output_data = '\n'.join(output_strs)
+        # ST3 r3153 changed ExecCommand from bytes to str so we must detect which we get and handle appropriately: https://github.com/elm-community/SublimeElmLanguageSupport/issues/48
+        output_data = output_data.encode(self.encoding) if self.data_in_bytes else output_data
         super(ElmMakeCommand, self).on_data(proc, output_data)
         super(ElmMakeCommand, self).on_finished(proc)
 
