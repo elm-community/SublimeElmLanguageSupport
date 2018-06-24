@@ -35,11 +35,6 @@
 | type           | ``type``                                         |
 | typea          | ``type alias (Record)``                          |
 
-- Autocompletions plus type signature and documentation display for all functions inside packages in your `elm-package.json` file (requires [elm-oracle](https://www.npmjs.com/package/elm-oracle), which you can install with `npm install -g elm-oracle`)
-    1. Bring up the type panel with `alt+up` or through the right-click context menu
-    2. Close the type panel with `alt+down`
-    3. If you don't like these keybindings, rebind them in your User packages directory
-![autocompletions screenshot](images/completions.png)![type signature screenshot](images/elm_types.png)![type panel screenshot](images/type_panel.png)
 - Four standard build commands (<kbd>Super+[Shift]+B</kbd> or <kbd>Super+[Shift]+F7</kbd>)
     1. `Build` just checks errors. Kudos to this [tweet][]!
     2. `Run` additionally outputs your compiled program to an inferred path.
@@ -51,7 +46,6 @@
     3. Compile message highlighting, embedded code highlighting, and color scheme for output panel. ![compile messages screenshot](images/elm_make.jpg)
 - Integration with popular plugins (installed separately)
     1. [SublimeREPL][] — Run `elm-repl` in an editor tab with syntax highlighting. ![SublimeREPL screenshot](images/elm_repl.jpg)
-    2. [Highlight Build Errors][] — Does what it says on the box … usually.
 - Integration with [elm format](https://github.com/avh4/elm-format)
     1. Make sure `elm-format` is in your PATH
     2. Run the "Elm Language Support: Run elm-format" command from the Command Palette to run elm-format on the current file

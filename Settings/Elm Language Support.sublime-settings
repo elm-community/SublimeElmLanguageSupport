@@ -1,9 +1,9 @@
 {
     "debug": false,
     "enabled": true,
+    "elm_binary": "elm",
     "elm_format_binary": "elm-format",
     "elm_format_on_save": true,
     "elm_format_filename_filter": "",
-    "elm_paths": "",
-    "build_error_color_scheme": "Packages/Color Scheme - Default/Sunburst.tmTheme"
+    "elm_paths": ""
 }

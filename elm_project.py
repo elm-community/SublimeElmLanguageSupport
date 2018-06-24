@@ -1,10 +1,7 @@
 import collections
 import json
 
-try:     # ST3
-    from .elm_plugin import *
-except:  # ST2
-    from elm_plugin import *
+from .elm_plugin import *
 
 class ElmProjectCommand(sublime_plugin.TextCommand):
 

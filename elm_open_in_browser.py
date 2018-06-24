@@ -1,17 +1,10 @@
 import webbrowser
 
-try:     # ST3
-    import urllib.parse as urlparse
-    import urllib.request as urllib
+import urllib.parse as urlparse
+import urllib.request as urllib
 
-    from .elm_plugin import *
-    from .elm_project import ElmProject
-except:  # ST2
-    import urlparse
-    import urllib
-
-    from elm_plugin import *
-    from elm_project import ElmProject
+from .elm_plugin import *
+from .elm_project import ElmProject
 
 class ElmOpenInBrowserCommand(sublime_plugin.TextCommand):
 

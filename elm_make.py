@@ -1,91 +1,277 @@
-import json
-import re
-import string
 import sublime
+import sublime_plugin
 
-try:     # ST3
-    from .elm_plugin import *
-    from .elm_project import ElmProject
-except:  # ST2
-    from elm_plugin import *
-    from elm_project import ElmProject
-default_exec = import_module('Default.exec')
+import html
+import json
+import os
+import string
+import subprocess
+import threading
 
-@replace_base_class('Highlight Build Errors.HighlightBuildErrors.ExecCommand')
-class ElmMakeCommand(default_exec.ExecCommand):
+from .elm_plugin import *
+from .elm_project import ElmProject
 
-    # inspired by: http://www.sublimetext.com/forum/viewtopic.php?t=12028
-    def run(self, error_format, info_format, syntax, null_device, warnings, **kwargs):
-        self.buffer = ''
-        self.data_in_bytes = False # ST3 r3153 changed ExecCommand from bytes to str so we must detect which we get and handle appropriately: https://github.com/elm-community/SublimeElmLanguageSupport/issues/48
-        self.warnings = warnings == "true"
-        self.error_format = string.Template(error_format)
-        self.info_format = string.Template(info_format)
-        self.run_with_project(null_device=null_device, **kwargs)
-        self.style_output(syntax)
+# We need a custom build command so that we can take the JSON output from the
+# Elm compiler and render it in a format that works with Sublime Text’s build
+# output panel syntax highlighting and regexp-based error navigation.
+#
+# Based on Advanced Example: https://www.sublimetext.com/docs/3/build_systems.html#advanced_example
+class ElmMakeCommand(sublime_plugin.WindowCommand):
 
-    def run_with_project(self, cmd, working_dir, null_device, **kwargs):
-        file_arg, output_arg = cmd[1:3]
-        project = ElmProject(file_arg)
+    encoding = 'utf-8'
+    killed = False
+    proc = None
+    panel = None
+    panel_lock = threading.Lock()
+
+    errs_by_file = {}
+    phantom_sets_by_buffer = {}
+    show_errors_inline = True
+
+    def is_enabled(self, kill=False):
+        # Cancel only available when the process is still running
+        if kill:
+            return self.proc is not None and self.proc.poll() is None
+        return True
+
+    def run(self, cmd=[], kill=False):
+        if kill:
+            if self.proc:
+                self.killed = True
+                self.proc.terminate()
+            return
+
+        working_dir = self.working_dir()
+        self.create_panel(working_dir)
+
+        if self.proc is not None:
+            self.proc.terminate()
+            self.proc = None
+
+        self.proc = subprocess.Popen(
+            self.format_cmd(cmd),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=working_dir
+        )
+        self.killed = False
+
+        threading.Thread(
+            target=self.read_handle,
+            args=(self.proc.stdout,)
+        ).start()
+
+    def working_dir(self):
+        vars = self.window.extract_variables()
+        project = ElmProject(vars['file'])
         log_string('project.logging.settings', repr(project))
-        if '{output}' in output_arg:
-            cmd[1] = fs.expanduser(project.main_path)
-            output_path = fs.expanduser(project.output_path)
-            cmd[2] = output_arg.format(output=output_path)
-        else:
-            # cmd[1] builds active file rather than project main
-            cmd[2] = output_arg.format(null=null_device)
-        project_dir = project.working_dir or working_dir
-        # ST2: TypeError: __init__() got an unexpected keyword argument 'syntax'
-        super(ElmMakeCommand, self).run(cmd, working_dir=project_dir, **kwargs)
+        return project.working_dir or vars['project_path'] or vars['file_path']
 
-    def style_output(self, syntax):
-        self.output_view.set_syntax_file(syntax)
-        elm_setting = sublime.load_settings('Elm Language Support.sublime-settings')
-        user_setting = sublime.load_settings('Preferences.sublime-settings')
-        color_scheme = elm_setting.get('build_error_color_scheme') or user_setting.get('color_scheme')
-        self.output_view.settings().set('color_scheme', color_scheme)
-        if self.is_patched:
-            self.debug_text = ''
-        else:
-            self.debug_text = get_string('make.missing_plugin')
+    def create_panel(self, working_dir):
+        # Only allow one thread to touch output panel at a time
+        with self.panel_lock:
+            # implicitly clears previous contents
+            self.panel = self.window.create_output_panel('exec')
 
-    def on_data(self, proc, data):
-        if isinstance(data, str):
-            self.buffer += data
-        else:
-            # ST3 r3153 changed ExecCommand from bytes to str so we must detect which we get and handle appropriately: https://github.com/elm-community/SublimeElmLanguageSupport/issues/48
-            self.data_in_bytes = True
-            self.buffer += data.decode(self.encoding)
+            settings = self.panel.settings()
 
-    def on_finished(self, proc):
-        result_strs = self.buffer.split('\n')
-        flat_map = lambda f, xss: sum(map(f, xss), [])
-        output_strs = flat_map(self.format_result, result_strs) + ['']
-        output_data = '\n'.join(output_strs)
-        # ST3 r3153 changed ExecCommand from bytes to str so we must detect which we get and handle appropriately: https://github.com/elm-community/SublimeElmLanguageSupport/issues/48
-        output_data = output_data.encode(self.encoding) if self.data_in_bytes else output_data
-        super(ElmMakeCommand, self).on_data(proc, output_data)
-        super(ElmMakeCommand, self).on_finished(proc)
+            self.panel.assign_syntax('Packages/Elm Language Support/Syntaxes/Elm Compile Messages.sublime-syntax')
+            settings.set('gutter', False)
+            settings.set('scroll_past_end', False)
+            settings.set('word_wrap', False)
+            settings.set('color_scheme', self.get_setting('build_output_color_scheme', 'color_scheme'))
 
-    def format_result(self, result_str):
-        decode_error = lambda dict: self.format_error(**dict) if 'type' in dict else dict
+            # Enable result navigation
+            settings.set(
+                'result_file_regex',
+                r'^\-\- \w+: (?=.+ \- (.+?):(\d+):(\d+))(.+) \- .*$'
+            )
+            settings.set('result_base_dir', working_dir)
+
+        preferences = sublime.load_settings('Preferences.sublime-settings')
+
+        self.hide_phantoms()
+        self.show_errors_inline = preferences.get('show_errors_inline', True)
+
+        show_panel_on_build = preferences.get('show_panel_on_build', True)
+        if show_panel_on_build:
+            self.window.run_command('show_panel', {'panel': 'output.exec'})
+
+    def format_cmd(self, cmd):
+        binary, command, file, output = cmd[0:4]
+
+        binary = binary.format(elm_binary=self.get_setting('elm_binary'))
+
+        return [binary, command, file, output] + cmd[4:]
+
+    def read_handle(self, handle):
+        chunk_size = 2 ** 13
+        output = b''
+        while True:
+            try:
+                chunk = os.read(handle.fileno(), chunk_size)
+                output += chunk
+
+                if chunk == b'':
+                    if output != b'':
+                        self.queue_write(self.format_output(output.decode(self.encoding)))
+                    raise IOError('EOF')
+
+            except UnicodeDecodeError as e:
+                msg = 'Error decoding output using %s - %s'
+                self.queue_write(msg % (self.encoding, str(e)))
+                break
+
+            except IOError:
+                if self.killed:
+                    msg = 'Cancelled'
+                else:
+                    msg = 'Finished'
+                    sublime.set_timeout(lambda: self.finish(), 0)
+                self.queue_write('[%s]' % msg)
+                break
+
+    def queue_write(self, text):
+        # Calling set_timeout inside this function rather than inline ensures
+        # that the value of text is captured for the lambda to use, and not
+        # mutated before it can run.
+        sublime.set_timeout(lambda: self.do_write(text), 1)
+
+    def do_write(self, text):
+        with self.panel_lock:
+            self.panel.set_read_only(False)
+            self.panel.run_command('append', {'characters': text})
+            self.panel.set_read_only(True)
+
+            if self.show_errors_inline and text.find('\n') >= 0:
+                errs = self.panel.find_all_results_with_text()
+                errs_by_file = {}
+                for file, line, column, text in errs:
+                    if file not in errs_by_file:
+                        errs_by_file[file] = []
+                    errs_by_file[file].append((line, column, text))
+                self.errs_by_file = errs_by_file
+
+                self.update_phantoms()
+
+    def format_output(self, output):
         try:
-            data = json.loads(result_str, object_hook=decode_error)
-            return [s for s in data if s is not None]
-        except ValueError:
-            log_string('make.logging.invalid_json', result_str)
-            info_str = result_str.strip()
-            return [self.info_format.substitute(info=info_str)] if info_str else []
+            data = json.loads(output)
+            log_string('make.logging.json', output)
+            return self.format_errors(data['errors'])
+        except ValueError as e:
+            log_string('make.logging.invalid_json', output)
+            return ''
 
-    def format_error(shelf, type, file, region, tag, overview, details, **kwargs):
-        if type == 'warning' and not shelf.warnings:
-            return None
-        line = region['start']['line']
-        column = region['start']['column']
-        message = overview
-        if details:
-            message += '\n' + re.sub(r'(\n)+', r'\1', details)
-        # TypeError: substitute() got multiple values for argument 'self'
-        # https://bugs.python.org/issue23671
-        return shelf.error_format.substitute(**locals())
+    def format_errors(self, errors):
+        return '\n'.join(map(self.format_error, errors)) + '\n'
+
+    def format_error(self, error):
+        file = error['path']
+        return '\n'.join(map(lambda problem: self.format_problem(file, problem), error['problems']))
+
+    def format_problem(self, file, problem):
+        error_format = string.Template('-- $type: $title - $file:$line:$column\n\n$message\n')
+
+        type = 'error'
+        title = problem['title']
+        line = problem['region']['start']['line']
+        column = problem['region']['start']['column']
+        message = self.format_message(problem['message'])
+
+        vars = locals()
+        vars.pop('self') # https://bugs.python.org/issue23671
+        return error_format.substitute(**vars)
+
+    def format_message(self, message):
+        format = lambda msg: msg['string'] if 'string' in msg else msg
+
+        return ''.join(map(format, message))
+
+    def finish(self):
+        errs = self.panel.find_all_results()
+        if len(errs) == 0:
+            sublime.status_message('Build finished')
+        else:
+            sublime.status_message('Build finished with %d errors' % len(errs))
+
+    # Borrowed from Sublime’s ExecCommand: https://github.com/twolfson/sublime-files/blob/master/Packages/Default/exec.py
+    def update_phantoms(self):
+        stylesheet = '''
+            <style>
+                div.error-arrow {
+                    border-top: 0.4rem solid transparent;
+                    border-left: 0.5rem solid color(var(--redish) blend(var(--background) 30%));
+                    width: 0;
+                    height: 0;
+                }
+                div.error {
+                    padding: 0.4rem 0 0.4rem 0.7rem;
+                    margin: 0 0 0.2rem;
+                    border-radius: 0 0.2rem 0.2rem 0.2rem;
+                }
+                div.error span.message {
+                    padding-right: 0.7rem;
+                }
+                div.error a {
+                    text-decoration: inherit;
+                    padding: 0.35rem 0.7rem 0.45rem 0.8rem;
+                    position: relative;
+                    bottom: 0.05rem;
+                    border-radius: 0 0.2rem 0.2rem 0;
+                    font-weight: bold;
+                }
+                html.dark div.error a {
+                    background-color: #00000018;
+                }
+                html.light div.error a {
+                    background-color: #ffffff18;
+                }
+            </style>
+        '''
+
+        for file, errs in self.errs_by_file.items():
+            view = self.window.find_open_file(file)
+            if view:
+
+                buffer_id = view.buffer_id()
+                if buffer_id not in self.phantom_sets_by_buffer:
+                    phantom_set = sublime.PhantomSet(view, "exec")
+                    self.phantom_sets_by_buffer[buffer_id] = phantom_set
+                else:
+                    phantom_set = self.phantom_sets_by_buffer[buffer_id]
+
+                phantoms = []
+
+                for line, column, text in errs:
+                    pt = view.text_point(line - 1, column - 1)
+                    phantoms.append(sublime.Phantom(
+                        sublime.Region(pt, view.line(pt).b),
+                        ('<body id=inline-error>' + stylesheet +
+                            '<div class="error-arrow"></div><div class="error">' +
+                            '<span class="message">' + html.escape(text, quote=False) + '</span>' +
+                            '<a href=hide>' + chr(0x00D7) + '</a></div>' +
+                            '</body>'),
+                        sublime.LAYOUT_BELOW,
+                        on_navigate=self.on_phantom_navigate))
+
+                phantom_set.update(phantoms)
+
+    def hide_phantoms(self):
+        for file, errs in self.errs_by_file.items():
+            view = self.window.find_open_file(file)
+            if view:
+                view.erase_phantoms('elm_make')
+
+        self.errs_by_file = {}
+        self.phantom_sets_by_buffer = {}
+        self.show_errors_inline = False
+
+    def on_phantom_navigate(self, url):
+        self.hide_phantoms()
+
+    def get_setting(self, key, user_key=None):
+        package_settings = sublime.load_settings('Elm Language Support.sublime-settings')
+        user_settings = self.window.active_view().settings()
+
+        return user_settings.get(user_key or ('elm_language_support_' + key), package_settings.get(key))

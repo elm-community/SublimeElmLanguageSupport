@@ -5,8 +5,10 @@ name: Elm Compile Messages
 hidden: true
 file_extensions: []
 scope: text.html.mediawiki.elm-build-output
+
 contexts:
   main:
+    - meta_scope: meta.report.elm-build-output
     - match: "^(::) "
       comment: "|> Unparsed Compile Message"
       push:
@@ -20,7 +22,7 @@ contexts:
           comment: Successfully generated
           scope: constant.language.boolean.true.elm-build-output
     - match: |-
-        (?x)           # Minimally modified `file_regex` from `Elm Make.sublime-build`
+        (?x)         # Minimally modified `file_regex` from `Elm Make.sublime-build`
         ^\-\-[ ]     # Leading delimiter
         ((error)     # \2: error
         |(warning)   # \3: warning
@@ -32,7 +34,7 @@ contexts:
         (\d+):       # \6: $line
         (\d+)        # \7: $column
         \n$          # End
-      comment: '-- TAG - file:line:column\nOverview\nDetail\n'
+      comment: '-- type: TAG - file:line:column\nMessage\n'
       captures:
         0: markup.heading.4.elm-build-output
         1: support.constant.type.elm-build-output
@@ -42,31 +44,39 @@ contexts:
         5: markup.underline.link.elm-build-output
         6: constant.numeric.elm-build-output
         7: constant.numeric.elm-build-output
+    - match: (`)(?!`)
+      comment: Inline `variable`
+      scope: punctuation.definition.raw.elm-build-output
       push:
-        - meta_scope: meta.report.elm-build-output
-        - meta_content_scope: string.unquoted.elm-build-output
-        - match: ^\n$
-          captures:
-            0: meta.separator.elm-build-output
-          pop: true
-        - match: (`)(?!`)
-          comment: Inline `variable`
+        - meta_scope: markup.raw.inline.elm-build-output
+        - meta_content_scope: variable.other.elm.elm-build-output
+        - match: \1
           captures:
             0: punctuation.definition.raw.elm-build-output
-          push:
-            - meta_scope: markup.raw.inline.elm-build-output
-            - meta_content_scope: variable.other.elm.elm-build-output
-            - match: \1
-              captures:
-                0: punctuation.definition.raw.elm-build-output
-              pop: true
-        - match: "(?m)^ {4}"
-          comment: Code Block
-          push:
-            - meta_scope: markup.raw.block.elm-build-output
-            - match: '\n+(?!^ {4})'
-              pop: true
-            - include: scope:source.elm
+          pop: true
+    - match: '(<)([^>]+)(>)'
+      comment: Inline <url>
+      captures:
+        1: punctuation.definition.link.elm-build-output
+        2: markup.underline.link.elm-build-output
+        3: punctuation.definition.link.elm-build-output
+    - match: '^Hint:'
+      scope: markup.heading.5.elm-build-output
+    - match: "^ +([x^]+)$"
+      comment: error jaggy underline
+      captures:
+        1: punctuation.definition.raw.elm-build-output
+    - match: "^ {4}"
+      comment: code block
+      embed: Elm.sublime-syntax
+      escape: \n
+    - match: '^(\d+)(\|( |>))'
+      captures:
+        1: constant.numeric.line-number.elm-build-output
+        2: punctuation.definition.raw.elm-build-output
+      comment: line-numbered code block
+      embed: scope:source.elm
+      escape: \n
     - match: ^\[
       comment: '[Finished in 4.2s]'
       push:

@@ -1,8 +1,9 @@
 {
-    "logging.prefix":                  "[Elm says]: ",
+    "logging.prefix":                  "Elm Language Support: ",
     "logging.missing_plugin":          "Missing plugin: {0}",
 
     "make.missing_plugin":             "To highlight build errors: Install with Package Control: Highlight Build Errors",
+    "make.logging.json":               "JSON from elm-make: {0}",
     "make.logging.invalid_json":       "Invalid JSON from elm-make: {0}",
 
     "open_in_browser.not_found":       "HTML file NOT found to open: {0}",
