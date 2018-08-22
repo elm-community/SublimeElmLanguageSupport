@@ -1,50 +1,17 @@
 ![Elm Language Support logo](images/logo.png)
 # The Sublime Elm Language Package
 
-> ### Note: Elm 0.19 and Elm Language Support
+> This prerelease version provides experimental support for the just-released
+> [Elm 0.19][], and **breaks compatibility** with Elm 0.18 and earlier.
 > 
-> Elm 0.19 was [recently released][elm-0.19]. It makes major, breaking changes
-> to the compiler's interface with packages like this one. It is likely the
-> next release of Elm Language Support will break compatibility with Elm 0.18.
-> 
-> If you plan to remain on Elm 0.18 for now, you should configure Package
-> Control to ignore updates to this package until you are ready to upgrade.
-> In Sublime Text, choose **Preferences > Package Settings > Package Control >
-> Settings – User**, then add this setting to your
-> **Package Control.sublime-settings** file:
-> 
-> ```json
-> {
->   "auto_upgrade_ignore": [
->     "Elm Language Support"
->   ],
-> }
-> ```
-> 
-> #### Upgrading to Elm 0.19
-> 
-> A pre-release version of this package with experimental support for Elm 0.19
-> is available. If you're using Elm 0.19 already, we'd value your feedback!
-> 
-> **Warning:** This new version does not support Elm 0.18!
-> 
-> To upgrade, configure Package Control to install pre-release versions of this
-> package. In Sublime Text, choose **Preferences > Package Settings > Package
-> Control > Settings – User**, then add this setting to your
-> **Package Control.sublime-settings** file:
-> 
-> ```json
-> {
->   "install_prereleases":
->   [
->     "Elm Language support"
->   ],
-> }
-> ```
-> 
-> Then use the **Package Control: Upgrade Package** command in the Command
-> Palette to upgrade. Make sure to read the release notes that are displayed
-> following the upgrade!
+> Please report issues on GitHub:
+> <https://github.com/elm-community/SublimeElmLanguageSupport/issues>
+>
+> Help Welcome
+> ------------
+>
+> Are you interested in contributing to the Elm Language Support package for
+Sublime Text? Get in touch!
 
 ## Installation
 
@@ -133,4 +100,4 @@ Don't know Elm? Great first step!
 [Sublime Text 2]: http://www.sublimetext.com/2
 [Sublime Text 3]: http://www.sublimetext.com/3
 [tweet]: https://twitter.com/rtfeldman/status/624026168652660740
-[elm-0.19]: https://elm-lang.org/blog/small-assets-without-the-headache
+[Elm 0.19]: https://elm-lang.org/blog/small-assets-without-the-headache
