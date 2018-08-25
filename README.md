@@ -37,7 +37,7 @@
 > {
 >   "install_prereleases":
 >   [
->     "Elm Language support"
+>     "Elm Language Support"
 >   ],
 > }
 > ```
