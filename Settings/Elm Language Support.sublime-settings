@@ -3,6 +3,7 @@
     "enabled": true,
     "elm_binary": "elm",
     "elm_format_binary": "elm-format",
+    "elm_format_options": "",
     "elm_format_on_save": true,
     "elm_format_filename_filter": "",
     "elm_paths": ""

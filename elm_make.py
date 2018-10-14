@@ -11,6 +11,8 @@ import threading
 from .elm_plugin import *
 from .elm_project import ElmProject
 
+USER_SETTING_PREFIX = 'elm_language_support_'
+
 # We need a custom build command so that we can take the JSON output from the
 # Elm compiler and render it in a format that works with Sublime Text’s build
 # output panel syntax highlighting and regexp-based error navigation.
@@ -274,4 +276,4 @@ class ElmMakeCommand(sublime_plugin.WindowCommand):
         package_settings = sublime.load_settings('Elm Language Support.sublime-settings')
         user_settings = self.window.active_view().settings()
 
-        return user_settings.get(user_key or ('elm_language_support_' + key), package_settings.get(key))
+        return user_settings.get(user_key or (USER_SETTING_PREFIX + key), package_settings.get(key))
