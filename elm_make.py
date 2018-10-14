@@ -86,7 +86,7 @@ class ElmMakeCommand(sublime_plugin.WindowCommand):
             # Enable result navigation
             settings.set(
                 'result_file_regex',
-                r'^\-\- \w+: (?=.+ \- (.+?):(\d+):(\d+))(.+) \- .*$'
+                r'^\-\- \w+: (?=.+ \- (.+?):(\d+)(?=:(\d+))?)(.+) \- .*$'
             )
             settings.set('result_base_dir', working_dir)
 
@@ -160,7 +160,12 @@ class ElmMakeCommand(sublime_plugin.WindowCommand):
         try:
             data = json.loads(output)
             log_string('make.logging.json', output)
-            return self.format_errors(data['errors'])
+            if data['type'] == 'compile-errors':
+                return self.format_errors(data['errors'])
+            elif data['type'] == 'error':
+                return self.format_compiler_error(data)
+            else:
+                return 'Unrecognized compiler output:\n' + str(output) + '\n\nPlease report this bug in Elm Language Support.\n\n'
         except ValueError as e:
             log_string('make.logging.invalid_json', output)
             return ''
@@ -180,6 +185,18 @@ class ElmMakeCommand(sublime_plugin.WindowCommand):
         line = problem['region']['start']['line']
         column = problem['region']['start']['column']
         message = self.format_message(problem['message'])
+
+        vars = locals()
+        vars.pop('self') # https://bugs.python.org/issue23671
+        return error_format.substitute(**vars)
+
+    def format_compiler_error(self, error):
+        error_format = string.Template('-- $type: $title - $file:1\n\n$message\n')
+
+        type = 'error'
+        title = error['title']
+        file = error['path']
+        message = self.format_message(error['message'])
 
         vars = locals()
         vars.pop('self') # https://bugs.python.org/issue23671
