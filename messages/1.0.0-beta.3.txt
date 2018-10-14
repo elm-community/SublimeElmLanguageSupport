@@ -1,0 +1,67 @@
+New in Elm Language Support 1.0.0-beta.3 (October 14, 2018)
+===========================================================
+
+This prerelease version provides experimental support for the just-released
+Elm 0.19, and BREAKS COMPATIBILITY with Elm 0.18 and earlier.
+
+Read about Elm 0.19 here:
+<https://github.com/elm/compiler/blob/master/upgrade-docs/0.19.md>
+
+Please report issues on GitHub:
+<https://github.com/elm-community/SublimeElmLanguageSupport/issues>
+
+What's New Since Beta 2
+-----------------------
+
+Better support for the different kinds of errors that the Elm 0.19 compiler can
+produce:
+
+ - Improved: Support for both compiler errors (the compiler failed with an
+   error) and compile errors (the compiler succeeded and found errors in your
+   program).
+
+
+Also New (Previous Betas)
+-------------------------
+
+The following features have been removed, as they depend on elm-oracle, which
+has not yet been updated to support Elm 0.19:
+
+ - Removed: Display type signatures for symbols under the cursor in the status
+   bar.
+ - Removed: Elm type info panel (alt/option-up/down keyboard shortcuts).
+ - Removed: Autocompletion of Elm symbols available in the current module.
+
+The build system was rewritten to support the new output format of the Elm 0.19
+compiler. The following features have yet to be reimplemented:
+
+ - Removed: Support for enabling/disabling build warnings (Elm 0.19 has removed
+   compiler warnings for now).
+ - Removed: Ability to build your whole project to an output file from within
+   Sublime Text. For now, the build system builds only the current module (and
+   everything it imports), which is sufficient for getting quick compiler
+   feedback on the code you're working on. But to actually run your all, you'll
+   need some other way of running a build of your whole project for now.
+
+elm-format integration has been improved:
+
+ - Improved: elm-format is now run from your project directory so it can detect
+   the version of Elm you are using.
+ - New: `elm_format_options` setting lets you pass command-line options (such
+   as `--elm-version`) to elm-format if you need to.
+
+And there are new features that will come in handy for those of you juggling
+multiple Elm versions on your machine:
+
+ - New: `elm_binary` setting that lets you override the path and filename to the
+   Elm binary file (`elm`) that Sublime Text uses to build your code.
+ - New: All package settings may now be set per-project (see README).
+
+
+Help Welcome
+------------
+
+Are you interested in contributing to the Elm Language Support package for
+Sublime Text? Get in touch!
+
+Reach me at @sentience or <thatguy@kevinyank.com>.
