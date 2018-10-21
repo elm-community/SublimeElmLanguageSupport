@@ -203,7 +203,7 @@ class ElmMakeCommand(sublime_plugin.WindowCommand):
         return error_format.substitute(**vars)
 
     def format_message(self, message):
-        format = lambda msg: msg['string'] if 'string' in msg else msg
+        format = lambda msg: msg if isinstance(msg, str) else msg['string']
 
         return ''.join(map(format, message))
 
