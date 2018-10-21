@@ -70,7 +70,7 @@ contexts:
       comment: code block
       embed: Elm.sublime-syntax
       escape: \n
-    - match: '^(\d+)(\|( |>))'
+    - match: '^ *(\d+)(\|( |>))'
       captures:
         1: constant.numeric.line-number.elm-build-output
         2: punctuation.definition.raw.elm-build-output
