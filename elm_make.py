@@ -50,11 +50,21 @@ class ElmMakeCommand(sublime_plugin.WindowCommand):
             self.proc.terminate()
             self.proc = None
 
+        # Configure Popen to hide console on Windows
+        # https://stackoverflow.com/questions/1765078/how-to-avoid-console-window-with-pyw-file-containing-os-system-call/12964900#12964900
+        # https://docs.python.org/3.3/library/subprocess.html#subprocess.STARTUPINFO
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+
         self.proc = subprocess.Popen(
             self.format_cmd(cmd),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            cwd=working_dir
+            cwd=working_dir,
+            startupinfo=startupinfo
         )
         self.killed = False
 
