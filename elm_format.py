@@ -12,11 +12,8 @@ USER_SETTING_PREFIX = 'elm_language_support_'
 
 class ElmFormatCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        # Hide the console window on Windows
-        shell = False
         path_separator = ':'
         if os.name == "nt":
-            shell = True
             path_separator = ';'
 
         binary = self.get_setting('elm_format_binary') or 'elm-format'
@@ -28,7 +25,13 @@ class ElmFormatCommand(sublime_plugin.TextCommand):
 
         working_dir = self.working_dir()
         command = binary.split() + [self.view.file_name(), '--yes'] + options.split()
-        p = subprocess.Popen(command, cwd=working_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
+        p = subprocess.Popen(
+            command,
+            cwd=working_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            startupinfo=get_popen_startupinfo()
+        )
 
         if path:
             os.environ['PATH'] = old_path
