@@ -54,7 +54,8 @@ class ElmMakeCommand(sublime_plugin.WindowCommand):
             self.format_cmd(cmd),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            cwd=working_dir
+            cwd=working_dir,
+            startupinfo=get_popen_startupinfo()
         )
         self.killed = False
 

@@ -1,6 +1,8 @@
 import sublime
 import sublime_plugin
+import os
 import os.path as fs
+import subprocess
 
 def is_ST2():
     return sublime.version().startswith('2')
@@ -66,3 +68,19 @@ def replace_base_class(path):
         return target_cls
 
     return decorator
+
+# Construct STARTUPINFO value that can be passed to Popen constructor on
+# Windows to suppress the console window that otherwise gets flashed when
+# elm.exe or elm-format.exe is run; this is more secure than passing
+# 'shell=True'.
+#
+# https://stackoverflow.com/questions/1765078/how-to-avoid-console-window-with-pyw-file-containing-os-system-call/12964900#12964900
+# https://docs.python.org/3.3/library/subprocess.html#subprocess.STARTUPINFO
+def get_popen_startupinfo():
+    if os.name == 'nt':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        return startupinfo
+    else:
+        return None
