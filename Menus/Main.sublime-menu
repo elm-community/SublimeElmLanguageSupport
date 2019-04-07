@@ -15,7 +15,7 @@
                     {
                         "type": "subprocess",
                         "encoding": "utf8",
-                        "cmd": ["elm-repl"],
+                        "cmd": ["elm", "repl"],
                         "cwd": "$file_path",
                         "syntax": "Packages/Elm Language Support/Syntaxes/Elm.sublime-syntax",
                         "external_id": "elm",
