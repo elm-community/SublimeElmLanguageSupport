@@ -1,3 +1,5 @@
+**This project is deprecated.** The official Elm language support package for Sublime Text is [evancz/elm-syntax-highlighting](https://github.com/evancz/elm-syntax-highlighting), with elm-format support available via [evancz/elm-format-on-save](https://github.com/evancz/elm-format-on-save).
+
 ![Elm Language Support logo](images/logo.png)
 # The Sublime Elm Language Package
 
